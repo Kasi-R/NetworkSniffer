@@ -62,6 +62,11 @@ extern "C" DLL_EXPORT void AddSourceIP(std::string NewIP)
     RSSniffer.AddSourceIP(NewIP);
 }
 
+extern "C" DLL_EXPORT void FilterIP(bool FilterIPs)
+{
+    RSSniffer.FilterIP(FilterIPs);
+}
+
 extern "C" DLL_EXPORT void ListenSource(bool Listen)
 {
     RSSniffer.ListenSource(Listen);

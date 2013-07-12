@@ -1,21 +1,22 @@
 #include "Sniffer.h"
 
-/*std::string ErrorMessage(std::uint32_t Error, bool Throw)
+std::string ErrorMessage(std::uint32_t Error, bool Throw)
 {
     LPTSTR lpMsgBuf = nullptr;
     FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, Error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPTSTR>(&lpMsgBuf), 0, nullptr);
+    LogError;
     if (Throw)
     {
         throw std::runtime_error(lpMsgBuf);
     }
     return lpMsgBuf;
 }
-*/
 
 Sniffer::Sniffer()
 {
     this->Initialized = false;
     this->Sniffing = false;
+    this->Filter = false;
     this->SniffSource = false;
     this->SniffDestination = false;
     this->Interface = 0;
@@ -23,7 +24,6 @@ Sniffer::Sniffer()
 
 /*void Sniffer::Test()
 {
-
 }*/
 
 Sniffer::~Sniffer()
@@ -33,7 +33,14 @@ Sniffer::~Sniffer()
 
 bool Sniffer::StringArrayContains(std::vector<std::string> Array, std::string Element)
 {
-    return (std::find(Array.begin(), Array.end(), Element) != Array.end());
+    for (unsigned int I = 0; I < Array.size(); I++)
+    {
+        if (Array.at(I) == Element)
+        {
+            return true;
+        }
+    }
+    return false;
 }
 
 void Sniffer::RemoveSourceIP(std::string OldIP)
@@ -67,7 +74,7 @@ void Sniffer::AddDestinationIP(std::string NewIP)
 void Sniffer::Error()
 {
     this->DeInitialize();
-//    ErrorMessage(WSAGetLastError(), true);
+    ErrorMessage(WSAGetLastError(), true);
 }
 
 void Sniffer::DeInitialize()
@@ -81,11 +88,13 @@ void Sniffer::DeInitialize()
     this->DestinationIP.clear();
     this->Interface = -1;
     this->BuffSize = -1;
+    this->Filter = false;
     this->SniffSource = false;
     this->SniffDestination = false;
     this->iphdr = nullptr;
     this->tcphdr = nullptr;
     this->icmphdr = nullptr;
+    this->udphdr = nullptr;
     closesocket(this->SniffSocket);
     WSACleanup();
     this->Initialized = false;
@@ -98,14 +107,12 @@ bool Sniffer::Initialize()
     WSADATA WSA;
     if (WSAStartup(MAKEWORD(2, 2), &WSA) != 0)
     {
-        LogError;
         this->Error();
         return false;
     }
     this->SniffSocket = socket(AF_INET, SOCK_RAW, IPPROTO_IP);
     if (this->SniffSocket == INVALID_SOCKET)
     {
-        LogError;
         this->Error();
         return false;
     }
@@ -119,7 +126,6 @@ bool Sniffer::Initialize()
     LocalHost = gethostbyname(HostName);
     if (LocalHost == nullptr)
     {
-        LogError;
         this->Error();
         return false;
     }
@@ -129,14 +135,12 @@ bool Sniffer::Initialize()
     this->Destination.sin_port = 0;
     if (bind(this->SniffSocket, reinterpret_cast<SOCKADDR*>(&this->Destination), sizeof(this->Destination)) == SOCKET_ERROR)
     {
-        LogError;
         this->Error();
         return false;
     }
     int Buff = 1;
     if (WSAIoctl(this->SniffSocket, _WSAIOW(IOC_VENDOR, 1), &Buff, sizeof(Buff), 0, 0, reinterpret_cast<LPDWORD>(&this->Interface), 0,0) == SOCKET_ERROR)
     {
-        LogError;
         this->Error();
         return false;
     }
@@ -190,10 +194,11 @@ int Sniffer::GetInterface()
 }
 
 void Sniffer::HandleTCP()
-{ /*
+{
     unsigned short IPHDR_LENGTH = this->iphdr->ip_header_len * 4;
     this->tcphdr = (TCP_HDR*)(this->Buffer + IPHDR_LENGTH);
-    std::fstream File("C:/Users/Kasi/Desktop/OutputLog.txt", std::ios::out | std::ios::app);
+    /*
+    std::fstream File("OutputLog.txt", std::ios::out | std::ios::app);
 
     if (File.is_open())
     {
@@ -212,12 +217,23 @@ void Sniffer::HandleTCP()
         File.close();
     }
 */
-
 }
 
 void Sniffer::HandleICMP()
 {
+    unsigned short IPHDR_LENGTH = this->iphdr->ip_header_len * 4;
+    this->icmphdr = (ICMP_HDR*)(this->Buffer + IPHDR_LENGTH);
+}
 
+void Sniffer::HandleUDP()
+{
+    unsigned short IPHDR_LENGTH = this->iphdr->ip_header_len * 4;
+    this->udphdr = (UDP_HDR*)(this->Buffer + IPHDR_LENGTH);
+}
+
+void Sniffer::FilterIP(bool FilterIPs)
+{
+    this->Filter = FilterIPs;
 }
 
 void Sniffer::ListenSource(bool Listen)
@@ -237,33 +253,43 @@ void Sniffer::Packet()
     this->Source.sin_addr.s_addr = this->iphdr->ip_srcaddr;
     memset(&this->Destination, 0, sizeof(this->Destination));
     this->Destination.sin_addr.s_addr = this->iphdr->ip_destaddr;
-    if (!(this->SniffSource && this->SniffDestination))
+    if (this->Filter)
     {
-        if (this->SniffSource && !this->StringArrayContains(this->SourceIP, inet_ntoa(this->Source.sin_addr)))
-            return;
-        if (this->SniffDestination && !this->StringArrayContains(this->DestinationIP, inet_ntoa(this->Destination.sin_addr)))
-            return;
-    } else
-    {
-        if (!(this->StringArrayContains(this->SourceIP, inet_ntoa(this->Source.sin_addr))) &&
-            !(this->StringArrayContains(this->DestinationIP, inet_ntoa(this->Destination.sin_addr))))
+        if (!(this->SniffSource && this->SniffDestination))
+        {
+            if (this->SniffSource && !this->StringArrayContains(this->SourceIP, inet_ntoa(this->Source.sin_addr)))
                 return;
+            if (this->SniffDestination && !this->StringArrayContains(this->DestinationIP, inet_ntoa(this->Destination.sin_addr)))
+                return;
+        } else
+        {
+            if (!(this->StringArrayContains(this->SourceIP, inet_ntoa(this->Source.sin_addr))) &&
+                !(this->StringArrayContains(this->DestinationIP, inet_ntoa(this->Destination.sin_addr))))
+                    return;
+        }
     }
-
+    std::cout << "Source : " << inet_ntoa(this->Source.sin_addr);
+    std::cout << " Destination : " << inet_ntoa(this->Destination.sin_addr);
+    std::cout << std::endl;
     switch (this->iphdr->ip_protocol)
     {
         case ICMP:
             this->HandleICMP();
+            std::cout << "ICMP\n";
             break;
         case TCP:
             this->HandleTCP();
+            std::cout << "TCP\n";
+            break;
+        case UDP:
+            this->HandleUDP();
+            std::cout << "UDP\n";
             break;
         default:
             break;
     }
 }
 
-/*
 std::string Sniffer::PrintBuffer(char* data, int s)
 {
     std::stringstream Val("");
@@ -274,4 +300,3 @@ std::string Sniffer::PrintBuffer(char* data, int s)
     }
     return Val.str();
 }
-*/

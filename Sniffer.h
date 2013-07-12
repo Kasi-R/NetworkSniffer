@@ -15,10 +15,12 @@ std::string ErrorMessage(std::uint32_t Error, bool Throw);
 
 #define ICMP 1
 #define TCP 6
+#define UDP 17
+
 
 typedef struct ip_hdr
 {
-    unsigned char ip_header_len:4;
+    unsigned char ip_header_len :4;
     unsigned char ip_version :4;
     unsigned char ip_tos;
     unsigned short ip_total_length;
@@ -66,6 +68,14 @@ typedef struct icmp_hdr
     USHORT seq;
 } ICMP_HDR;
 
+typedef struct udp_hdr
+{
+    unsigned short source_port;
+    unsigned short dest_port;
+    unsigned short udp_length;
+    unsigned short udp_checksum;
+} UDP_HDR;
+
 class Sniffer
 {
     public:
@@ -81,12 +91,12 @@ class Sniffer
         void DeInitialize();
         void Start();
         void Stop();
+        void FilterIP(bool FilterIPs);
         void ListenSource(bool Listen);
         void ListenDestination(bool Listen);
         char *Buffer;
         std::string GetIP(std::string Address);
        // void Test();
-
     private:
         SOCKET SniffSocket;
         int Interface;
@@ -99,15 +109,18 @@ class Sniffer
         void Sniff();
         void HandleICMP();
         void HandleTCP();
+        void HandleUDP();
         void Packet();
         bool StringArrayContains(std::vector<std::string> Array, std::string Element);
-        //std::string PrintBuffer(char* data, int s);
+        std::string PrintBuffer(char* data, int s);
         int BuffSize;
+        bool Filter;
         bool SniffSource;
         bool SniffDestination;
         IPV4_HDR *iphdr;
         TCP_HDR *tcphdr;
         ICMP_HDR *icmphdr;
+        UDP_HDR *udphdr;
 };
 
 #endif // SNIFFER_H_INCLUDED
