@@ -1,0 +1,56 @@
+# depslib dependency file v1.0
+1372700405 source:c:\users\kasi\desktop\rs_sniff\main.cpp
+	"main.h"
+
+1372699104 c:\users\kasi\desktop\rs_sniff\main.h
+	"Sniffer.h"
+	<windows.h>
+
+1372700466 source:c:\users\kasi\desktop\rs_sniff\sniffer.cpp
+	"Sniffer.h"
+
+1372700092 c:\users\kasi\desktop\rs_sniff\sniffer.h
+	<string>
+	<Winsock2.h>
+	<stdexcept>
+	<algorithm>
+
+1372899898 source:c:\users\kasi\dropbox\rs_sniff\sniffer.cpp
+	"Sniffer.h"
+
+1372899910 c:\users\kasi\dropbox\rs_sniff\sniffer.h
+	<string>
+	<Winsock2.h>
+	<stdexcept>
+	<algorithm>
+	<fstream>
+	<iostream>
+	<sstream>
+
+1372898863 source:c:\users\kasi\dropbox\rs_sniff\main.cpp
+	"main.h"
+
+1372699104 c:\users\kasi\dropbox\rs_sniff\main.h
+	"Sniffer.h"
+	<windows.h>
+
+1373656054 source:c:\users\kasi\dropbox\networksniffer\main.cpp
+	"main.h"
+
+1372699104 c:\users\kasi\dropbox\networksniffer\main.h
+	"Sniffer.h"
+	<windows.h>
+
+1373656105 c:\users\kasi\dropbox\networksniffer\sniffer.h
+	<string>
+	<Winsock2.h>
+	<stdexcept>
+	<algorithm>
+	<fstream>
+	<iostream>
+	<sstream>
+	<vector>
+
+1373656164 source:c:\users\kasi\dropbox\networksniffer\sniffer.cpp
+	"Sniffer.h"
+
